@@ -227,7 +227,9 @@ fn test_creates_distributed_trace() {
     );
     println!("test logic done");
 
-    tracer_provider.shutdown();
+    let x = tracer_provider.shutdown();
+    println!("{:?}", x);
+    println!("shut down provider");
 }
 
 struct TestInjector<'a>(&'a mut HashMap<String, String>);
