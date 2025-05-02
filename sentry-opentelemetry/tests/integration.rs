@@ -47,6 +47,8 @@ fn test_captures_transaction() {
         }
         unexpected => panic!("Expected transaction, but got {:#?}", unexpected),
     }
+
+    tracer_provider.shutdown();
 }
 
 #[test]
@@ -122,6 +124,8 @@ fn test_captures_transaction_with_nested_spans() {
         }
         unexpected => panic!("Expected transaction, but got {:#?}", unexpected),
     }
+
+    tracer_provider.shutdown();
 }
 
 #[test]
@@ -222,8 +226,8 @@ fn test_creates_distributed_trace() {
         "Second service's parent span ID should match first service's span ID"
     );
     println!("test logic done");
-    std::thread::sleep(std::time::Duration::from_secs(1));
-    println!("end of test");
+
+    tracer_provider.shutdown();
 }
 
 struct TestInjector<'a>(&'a mut HashMap<String, String>);
@@ -328,4 +332,6 @@ fn test_associates_event_with_span() {
         trace_id_from_event
     );
     assert_eq!(span_id, span_id_from_event);
+
+    tracer_provider.shutdown();
 }
