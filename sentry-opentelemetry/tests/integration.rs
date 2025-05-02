@@ -221,6 +221,9 @@ fn test_creates_distributed_trace() {
         Some(first_span_id),
         "Second service's parent span ID should match first service's span ID"
     );
+    println!("test logic done");
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    println!("end of test");
 }
 
 struct TestInjector<'a>(&'a mut HashMap<String, String>);
