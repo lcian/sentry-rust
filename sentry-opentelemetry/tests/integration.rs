@@ -127,21 +127,27 @@ fn test_captures_transaction_with_nested_spans() {
 #[test]
 #[serial]
 fn test_creates_distributed_trace() {
+    println!("init transport");
     let transport = shared::init_sentry(1.0); // Sample all spans
 
     // Set up OpenTelemetry
+    println!("set propagator");
     global::set_text_map_propagator(SentryPropagator::new());
+    println!("tracer provider");
     let tracer_provider = SdkTracerProvider::builder()
         .with_span_processor(SentrySpanProcessor::new())
         .build();
+    println!("tracer");
     let tracer = tracer_provider.tracer("test".to_string());
 
     // Create a "first service" span
+    println!("first_service");
     let first_service_span = tracer.start("first_service");
     let first_service_ctx = Context::current_with_span(first_service_span);
 
     // Simulate passing the context to another service by extracting and injecting e.g. HTTP
     // headers
+    println!("propagator");
     let propagator = SentryPropagator::new();
     let mut headers = HashMap::new();
     propagator.inject_context(&first_service_ctx, &mut TestInjector(&mut headers));
