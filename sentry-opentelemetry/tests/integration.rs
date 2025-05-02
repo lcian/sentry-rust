@@ -153,44 +153,54 @@ fn test_creates_distributed_trace() {
     propagator.inject_context(&first_service_ctx, &mut TestInjector(&mut headers));
 
     // End the first service span
+    println!("end first service");
     first_service_ctx.span().end();
 
     // Check that the first service sent data to Sentry
+    println!("fetch and clear envelopes");
     let first_envelopes = transport.fetch_and_clear_envelopes();
     assert_eq!(first_envelopes.len(), 1);
 
+    println!("first tx");
     let first_tx = match first_envelopes[0].items().next().unwrap() {
         sentry::protocol::EnvelopeItem::Transaction(tx) => tx.clone(),
         _ => panic!("Expected transaction"),
     };
 
     // Get first service trace ID and span ID
+    println!("first trace id and span id");
     let (first_trace_id, first_span_id) = match &first_tx.contexts.get("trace") {
         Some(sentry::protocol::Context::Trace(trace)) => (trace.trace_id, trace.span_id),
         _ => panic!("Missing trace context in first transaction"),
     };
 
     // Now simulate the second service receiving the headers and continuing the trace
+    println!("extract with context");
     let second_service_ctx =
         propagator.extract_with_context(&Context::current(), &TestExtractor(&headers));
 
     // Create a second service span that continues the trace
+    println!("second service span");
     let second_service_span = tracer.start_with_context("second_service", &second_service_ctx);
     let second_service_ctx = second_service_ctx.with_span(second_service_span);
 
     // End the second service span
+    println!("end second service");
     second_service_ctx.span().end();
 
     // Check that the second service sent data to Sentry
+    println!("fetch and clear envelopes 2");
     let second_envelopes = transport.fetch_and_clear_envelopes();
     assert_eq!(second_envelopes.len(), 1);
 
+    println!("second tx");
     let second_tx = match second_envelopes[0].items().next().unwrap() {
         sentry::protocol::EnvelopeItem::Transaction(tx) => tx.clone(),
         _ => panic!("Expected transaction"),
     };
 
     // Get second service trace ID and span ID
+    println!("second trace id and span id");
     let (second_trace_id, second_span_id, second_parent_span_id) =
         match &second_tx.contexts.get("trace") {
             Some(sentry::protocol::Context::Trace(trace)) => {
@@ -200,6 +210,7 @@ fn test_creates_distributed_trace() {
         };
 
     // Verify the distributed trace - same trace ID, different span IDs
+    println!("asserts");
     assert_eq!(first_trace_id, second_trace_id, "Trace IDs should match");
     assert_ne!(
         first_span_id, second_span_id,
