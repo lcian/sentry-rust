@@ -195,6 +195,7 @@ mod session_impl {
         worker: Option<JoinHandle<()>>,
     }
 
+    #[derive(Debug)]
     enum Status {
         STARTUP,
         RUNNING,
@@ -244,6 +245,7 @@ mod session_impl {
             {
                 let mut status = lock.lock().unwrap();
                 while matches!(*status, Status::STARTUP) {
+                    dbg!(status);
                     status = cvar.wait(status).unwrap();
                 }
             }
