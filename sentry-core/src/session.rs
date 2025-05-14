@@ -243,7 +243,7 @@ mod session_impl {
             let (lock, cvar) = status.as_ref();
             {
                 let mut status = lock.lock().unwrap();
-                while !matches!(*status, Status::RUNNING) {
+                while matches!(*status, Status::STARTUP) {
                     status = cvar.wait(status).unwrap();
                 }
             }
