@@ -249,8 +249,8 @@ mod session_impl {
                 })
                 .unwrap();
 
-            let (lock, cvar) = status.as_ref();
             {
+                let (lock, cvar) = status.as_ref();
                 let _guard = cvar
                     .wait_while(lock.lock().unwrap(), |status| {
                         matches!(*status, Status::STARTUP)
@@ -377,16 +377,16 @@ mod session_impl {
 
     impl Drop for SessionFlusher {
         fn drop(&mut self) {
-            let (lock, cvar) = self.status.as_ref();
             {
+                let (lock, cvar) = self.status.as_ref();
                 let mut status = cvar
                     .wait_while(lock.lock().unwrap(), |status| {
                         matches!(*status, Status::STARTUP)
                     })
                     .unwrap();
                 *status = Status::SHUTDOWN;
+                cvar.notify_one();
             }
-            cvar.notify_one();
 
             if let Some(worker) = self.worker.take() {
                 worker.join().ok();
