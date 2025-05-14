@@ -245,7 +245,7 @@ mod session_impl {
             {
                 let mut status = lock.lock().unwrap();
                 while matches!(*status, Status::STARTUP) {
-                    dbg!(status);
+                    dbg!(&*status);
                     status = cvar.wait(status).unwrap();
                 }
             }
