@@ -210,13 +210,13 @@ mod session_impl {
 
             let worker_transport = transport.clone();
             let worker_queue = queue.clone();
-            let worker_shutdown = status.clone();
+            let worker_status = status.clone();
             let worker = std::thread::Builder::new()
                 .name("sentry-session-flusher".into())
                 .spawn(move || {
-                    let (lock, cvar) = worker_shutdown.as_ref();
-                    let mut status = lock.lock().unwrap();
-                    *status = Status::RUNNING;
+                    let (lock, cvar) = worker_status.as_ref();
+                    let mut worker_status = lock.lock().unwrap();
+                    *worker_status = Status::RUNNING;
                     cvar.notify_one();
 
                     let mut last_flush = Instant::now();
@@ -224,8 +224,8 @@ mod session_impl {
                         let timeout = FLUSH_INTERVAL
                             .checked_sub(last_flush.elapsed())
                             .unwrap_or_else(|| Duration::from_secs(0));
-                        status = cvar.wait_timeout(status, timeout).unwrap().0;
-                        if matches!(*status, Status::SHUTDOWN) {
+                        worker_status = cvar.wait_timeout(worker_status, timeout).unwrap().0;
+                        if matches!(*worker_status, Status::SHUTDOWN) {
                             return;
                         }
                         if last_flush.elapsed() < FLUSH_INTERVAL {
