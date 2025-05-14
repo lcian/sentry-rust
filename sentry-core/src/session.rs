@@ -214,12 +214,12 @@ mod session_impl {
             let worker = std::thread::Builder::new()
                 .name("sentry-session-flusher".into())
                 .spawn(move || {
-                    let (lock, cvar) = worker_status.as_ref();
                     {
+                        let (lock, cvar) = worker_status.as_ref();
                         let mut status = lock.lock().unwrap();
                         *status = Status::RUNNING;
+                        cvar.notify_all();
                     }
-                    cvar.notify_all();
 
                     let mut last_flush = Instant::now();
                     loop {
@@ -379,13 +379,13 @@ mod session_impl {
         fn drop(&mut self) {
             let (lock, cvar) = self.status.as_ref();
             {
-                let _guard = cvar
+                let mut status = cvar
                     .wait_while(lock.lock().unwrap(), |status| {
                         matches!(*status, Status::STARTUP)
                     })
                     .unwrap();
+                *status = Status::SHUTDOWN;
             }
-            *lock.lock().unwrap() = Status::SHUTDOWN;
             cvar.notify_one();
 
             if let Some(worker) = self.worker.take() {
