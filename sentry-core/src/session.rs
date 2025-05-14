@@ -218,7 +218,7 @@ mod session_impl {
                     let (lock, cvar) = worker_status.as_ref();
                     let mut worker_status = lock.lock().unwrap();
                     *worker_status = Status::RUNNING;
-                    cvar.notify_one();
+                    cvar.notify_all();
 
                     let mut last_flush = Instant::now();
                     loop {
@@ -374,10 +374,11 @@ mod session_impl {
             {
                 let mut status = lock.lock().unwrap();
                 while !matches!(*status, Status::RUNNING) {
+                    dbg!(&*status);
                     status = cvar.wait(status).unwrap();
                 }
                 *status = Status::SHUTDOWN;
-                cvar.notify_one();
+                cvar.notify_all();
             }
 
             if let Some(worker) = self.worker.take() {
