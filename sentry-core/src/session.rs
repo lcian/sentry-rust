@@ -191,7 +191,7 @@ mod session_impl {
         transport: TransportArc,
         mode: SessionMode,
         queue: Arc<Mutex<SessionQueue>>,
-        shutdown: Arc<(Mutex<Status>, Condvar)>,
+        status: Arc<(Mutex<Status>, Condvar)>,
         worker: Option<JoinHandle<()>>,
     }
 
@@ -252,7 +252,7 @@ mod session_impl {
                 transport,
                 mode,
                 queue,
-                shutdown: status,
+                status,
                 worker: Some(worker),
             }
         }
@@ -368,9 +368,15 @@ mod session_impl {
 
     impl Drop for SessionFlusher {
         fn drop(&mut self) {
-            let (lock, cvar) = self.shutdown.as_ref();
-            *lock.lock().unwrap() = Status::SHUTDOWN;
-            cvar.notify_one();
+            let (lock, cvar) = self.status.as_ref();
+            {
+                let mut status = lock.lock().unwrap();
+                while !matches!(*status, Status::RUNNING) {
+                    status = cvar.wait(status).unwrap();
+                }
+                *status = Status::SHUTDOWN;
+                cvar.notify_one();
+            }
 
             if let Some(worker) = self.worker.take() {
                 worker.join().ok();
