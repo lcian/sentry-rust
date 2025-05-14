@@ -215,16 +215,17 @@ mod session_impl {
                 .name("sentry-session-flusher".into())
                 .spawn(move || {
                     let (lock, cvar) = worker_shutdown.as_ref();
-                    let mut shutdown = lock.lock().unwrap();
-                    *shutdown = Status::RUNNING;
+                    let mut status = lock.lock().unwrap();
+                    *status = Status::RUNNING;
+                    cvar.notify_one();
 
                     let mut last_flush = Instant::now();
                     loop {
                         let timeout = FLUSH_INTERVAL
                             .checked_sub(last_flush.elapsed())
                             .unwrap_or_else(|| Duration::from_secs(0));
-                        shutdown = cvar.wait_timeout(shutdown, timeout).unwrap().0;
-                        if matches!(*shutdown, Status::SHUTDOWN) {
+                        status = cvar.wait_timeout(status, timeout).unwrap().0;
+                        if matches!(*status, Status::SHUTDOWN) {
                             return;
                         }
                         if last_flush.elapsed() < FLUSH_INTERVAL {
@@ -368,7 +369,7 @@ mod session_impl {
     impl Drop for SessionFlusher {
         fn drop(&mut self) {
             let (lock, cvar) = self.shutdown.as_ref();
-            *lock.lock().unwrap() = true;
+            *lock.lock().unwrap() = Status::SHUTDOWN;
             cvar.notify_one();
 
             if let Some(worker) = self.worker.take() {
